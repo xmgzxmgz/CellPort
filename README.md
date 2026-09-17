@@ -4,6 +4,7 @@
 
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2B-blue)
 ![.NET](https://img.shields.io/badge/.NET-9.0%20WPF-512BD4)
+![Release](https://img.shields.io/github/v/release/xmgzxmgz/CellPort)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 CellPort 是一款 **Windows 原生**（不依赖 WSL）的大疆一代 4G 模块管理器，功能对标 macOS 上的 CellDock：
@@ -11,6 +12,9 @@ CellPort 是一款 **Windows 原生**（不依赖 WSL）的大疆一代 4G 模�
 
 > 硬件为大疆 4G 模块一代（实为 Quectel EG25-G / MDM9607 内核），
 > 理论上兼容所有 EG25-G / EC25 系列模组。
+
+**📥 免构建下载**：前往 [Releases](https://github.com/xmgzxmgz/CellPort/releases/latest) 下载 `CellPort-v1.0.0-win-x64.zip`，
+解压运行 `CellPort.exe`（需 [.NET 9 Desktop Runtime (x64)](https://dotnet.microsoft.com/download/dotnet/9.0)）。
 
 ![eSIM 页面截图（已脱敏）](docs/screenshot-esim.png)
 
