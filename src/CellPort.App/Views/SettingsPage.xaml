@@ -117,6 +117,15 @@
                     <TextBlock Style="{StaticResource DimText}" TextWrapping="Wrap"
                                Margin="0,8,0,0"
                                Text="本项目为社区第三方工具，与 DJI、Quectel、Baiwang 无隶属或授权关系。" />
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button x:Name="CheckUpdateButton" Content="检查更新"
+                                Height="30" Padding="14,0"
+                                Style="{StaticResource PrimaryButton}"
+                                Click="CheckUpdate_Click" />
+                        <TextBlock x:Name="VersionText" Margin="12,0,0,0"
+                                   VerticalAlignment="Center"
+                                   Style="{StaticResource DimText}" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
         </StackPanel>

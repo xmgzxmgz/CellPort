@@ -23,11 +23,22 @@
                     <Grid>
                         <TextBlock Text="会话" Style="{StaticResource HeadingText}"
                                    VerticalAlignment="Center" />
-                        <Button x:Name="NewSmsButton" Content="新短信"
-                                HorizontalAlignment="Right" Height="28"
-                                Padding="10,0"
-                                Style="{StaticResource GhostButton}"
-                                Click="NewSms_Click" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                            <Button x:Name="ExportCsvButton" Content="导出 CSV"
+                                    Height="28" Padding="10,0"
+                                    Style="{StaticResource GhostButton}"
+                                    ToolTip="把当前全部短信导出为 CSV（Excel 可直接打开）"
+                                    Click="ExportCsv_Click" />
+                            <Button x:Name="ExportJsonButton" Content="导出 JSON"
+                                    Height="28" Padding="10,0" Margin="6,0,0,0"
+                                    Style="{StaticResource GhostButton}"
+                                    ToolTip="把当前全部短信导出为 JSON"
+                                    Click="ExportJson_Click" />
+                            <Button x:Name="NewSmsButton" Content="新短信"
+                                    Height="28" Padding="10,0" Margin="6,0,0,0"
+                                    Style="{StaticResource GhostButton}"
+                                    Click="NewSms_Click" />
+                        </StackPanel>
                     </Grid>
                 </Border>
 

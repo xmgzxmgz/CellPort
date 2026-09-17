@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
@@ -19,6 +20,8 @@ public partial class SettingsPage : UserControl, IModuleAware
     {
         InitializeComponent();
         LoadSettings();
+        var v = typeof(App).Assembly.GetName().Version;
+        VersionText.Text = v is null ? string.Empty : $"当前版本 v{v.ToString(3)}";
     }
 
     public void OnActivated(ModemManager modem) => _modem = modem;
@@ -91,6 +94,63 @@ public partial class SettingsPage : UserControl, IModuleAware
 
     private static string? NullIfEmpty(string? s) =>
         string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    /// <summary>向 GitHub Releases 查询新版本。</summary>
+    private async void CheckUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        var current = typeof(App).Assembly.GetName().Version;
+        if (current is null)
+        {
+            return;
+        }
+
+        CheckUpdateButton.IsEnabled = false;
+        CheckUpdateButton.Content = "检查中…";
+        try
+        {
+            var r = await UpdateCheckService.CheckAsync(current);
+            if (r is null)
+            {
+                var manual = MessageBox.Show(
+                    "无法连接 GitHub（可能需要代理）。是否打开 Release 页面手动检查？",
+                    "检查更新", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                if (manual == MessageBoxResult.Yes)
+                {
+                    Process.Start(new ProcessStartInfo(UpdateCheckService.ReleasesPage)
+                    {
+                        UseShellExecute = true,
+                    });
+                }
+
+                return;
+            }
+
+            if (r.HasUpdate)
+            {
+                var open = MessageBox.Show(
+                    $"发现新版本 {r.LatestTag}（当前 v{current.ToString(3)}）。\n\n前往下载页面吗？",
+                    "发现更新", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                if (open == MessageBoxResult.Yes)
+                {
+                    Process.Start(new ProcessStartInfo(r.ReleaseUrl!)
+                    {
+                        UseShellExecute = true,
+                    });
+                }
+            }
+            else
+            {
+                MessageBox.Show(
+                    $"已是最新版本（v{current.ToString(3)}，远端 {r.LatestTag}）。",
+                    "检查更新", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+        }
+        finally
+        {
+            CheckUpdateButton.IsEnabled = true;
+            CheckUpdateButton.Content = "检查更新";
+        }
+    }
 }
 
 /// <summary>

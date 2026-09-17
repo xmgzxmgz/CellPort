@@ -301,6 +301,74 @@ public partial class SmsPage : UserControl, IModuleAware
         }
     }
 
+    /// <summary>把当前收件箱全部导出为 CSV（Excel 友好）。</summary>
+    private void ExportCsv_Click(object sender, RoutedEventArgs e)
+    {
+        var msgs = _modem?.Sms?.Inbox;
+        if (msgs is null || msgs.Count == 0)
+        {
+            MessageBox.Show("暂无短信可导出。", "导出",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var dlg = new Microsoft.Win32.SaveFileDialog
+        {
+            FileName = $"CellPort-SMS-{DateTime.Now:yyyyMMdd-HHmmss}.csv",
+            Filter = "CSV 文件|*.csv",
+        };
+        if (dlg.ShowDialog() != true)
+        {
+            return;
+        }
+
+        try
+        {
+            SmsExportService.ExportCsv(msgs, dlg.FileName);
+            MessageBox.Show($"已导出 {msgs.Count} 条短信到：\n{dlg.FileName}", "导出完成",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"导出失败：{ex.Message}", "错误",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    /// <summary>把当前收件箱全部导出为 JSON。</summary>
+    private void ExportJson_Click(object sender, RoutedEventArgs e)
+    {
+        var msgs = _modem?.Sms?.Inbox;
+        if (msgs is null || msgs.Count == 0)
+        {
+            MessageBox.Show("暂无短信可导出。", "导出",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var dlg = new Microsoft.Win32.SaveFileDialog
+        {
+            FileName = $"CellPort-SMS-{DateTime.Now:yyyyMMdd-HHmmss}.json",
+            Filter = "JSON 文件|*.json",
+        };
+        if (dlg.ShowDialog() != true)
+        {
+            return;
+        }
+
+        try
+        {
+            SmsExportService.ExportJson(msgs, dlg.FileName);
+            MessageBox.Show($"已导出 {msgs.Count} 条短信到：\n{dlg.FileName}", "导出完成",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"导出失败：{ex.Message}", "错误",
+                MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private void NewSms_Click(object sender, RoutedEventArgs e)
     {
         _activeNumber = null;

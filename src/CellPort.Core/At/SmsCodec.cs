@@ -72,7 +72,7 @@ public static class SmsCodec
     {
         var count = septetCount > 0 ? septetCount : data.Length * 8 / 7;
         var sb = new StringBuilder(count);
-        byte accumulator = 0;
+        int accumulator = 0;
         int bits = 0;
         int index = 0;
 
@@ -84,7 +84,7 @@ public static class SmsCodec
                 {
                     break;
                 }
-                accumulator |= (byte)(data[index++] << bits);
+                accumulator |= data[index++] << bits;
                 bits += 8;
             }
 

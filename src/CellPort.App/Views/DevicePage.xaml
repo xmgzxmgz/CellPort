@@ -105,6 +105,61 @@
                     </StackPanel>
                 </StackPanel>
             </Border>
+
+            <!-- USSD 查询 -->
+            <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                <StackPanel>
+                    <TextBlock Text="USSD 查询" Style="{StaticResource HeadingText}"
+                               Margin="0,0,0,8" />
+                    <TextBlock Text="查话费、流量、余额等（具体号码由运营商决定）。网络响应可能需要数秒。"
+                               Style="{StaticResource HintText}" />
+
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="UssdBox" Style="{StaticResource InputBox}"
+                                 Height="30" VerticalContentAlignment="Center"
+                                 Text="*100#" />
+                        <Button x:Name="UssdSendButton" Grid.Column="1"
+                                Content="发送" Height="30" Margin="8,0,0,0"
+                                Padding="14,0"
+                                Style="{StaticResource PrimaryButton}"
+                                Click="UssdSend_Click" />
+                    </Grid>
+
+                    <TextBox x:Name="UssdResult" Margin="0,10,0,0"
+                             Style="{StaticResource InputBox}"
+                             IsReadOnly="True" MinHeight="56"
+                             TextWrapping="Wrap" AcceptsReturn="True"
+                             VerticalScrollBarVisibility="Auto"
+                             Text="尚未发送查询。" />
+                </StackPanel>
+            </Border>
+
+            <!-- SIM 电话簿 -->
+            <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Text="SIM 电话簿" Style="{StaticResource HeadingText}"
+                                   VerticalAlignment="Center" />
+                        <Button x:Name="PhonebookButton" Content="读取"
+                                HorizontalAlignment="Right" Height="28"
+                                Padding="12,0"
+                                Style="{StaticResource GhostButton}"
+                                Click="PhonebookRead_Click" />
+                    </Grid>
+                    <TextBlock x:Name="PhonebookSummary"
+                               Text="尚未读取。联系人保存在 SIM 卡内，读取后点击行可复制号码。"
+                               Style="{StaticResource HintText}"
+                               Margin="0,8,0,6" />
+                    <ScrollViewer MaxHeight="260"
+                                  VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="PhonebookPanel" />
+                    </ScrollViewer>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

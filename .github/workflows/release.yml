@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Run unit tests
+        run: dotnet test tests/CellPort.Core.Tests/CellPort.Core.Tests.csproj -v q --nologo
+
+      - name: Publish (framework-dependent)
+        run: dotnet publish src/CellPort.App/CellPort.App.csproj -c Release -r win-x64 --self-contained false -o dist/framework-dependent
+
+      - name: Publish (self-contained)
+        run: dotnet publish src/CellPort.App/CellPort.App.csproj -c Release -r win-x64 --self-contained true -o dist/self-contained
+
+      - name: Extract version from tag
+        id: ver
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}" -replace '^v', ''
+          "version=$tag" >> $env:GITHUB_OUTPUT
+
+      - name: Zip artifacts
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          Compress-Archive -Path "dist/framework-dependent/*" -DestinationPath "CellPort-v$v-win-x64.zip" -Force
+          Compress-Archive -Path "dist/self-contained/*" -DestinationPath "CellPort-v$v-win-x64-selfcontained.zip" -Force
+
+      - name: Create Release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            CellPort-v*-win-x64.zip
+            CellPort-v*-win-x64-selfcontained.zip

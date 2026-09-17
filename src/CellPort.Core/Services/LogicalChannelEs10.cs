@@ -396,49 +396,29 @@ public sealed class LogicalChannelEs10
             return new ProfileStateResult(false, -1, "ISD-R 逻辑通道未打开");
         }
 
-        byte[] aid;
+        byte[] req;
         try
         {
-            aid = Unhex(isdpAidHex);
+            req = BuildProfileStateRequest(enable, isdpAidHex);
         }
-        catch
+        catch (ArgumentException)
         {
             return new ProfileStateResult(false, -1, "ISD-P AID 格式错误");
         }
 
-        if (aid.Length == 0 || aid.Length > 16)
-        {
-            return new ProfileStateResult(false, -1, "ISD-P AID 长度异常");
-        }
+        return await ExecuteProfileOpAsync(req, enable ? 0xBF31 : 0xBF32, ct).ConfigureAwait(false);
+    }
 
-        // 4F <len> <aid> 81 01 00  →  A0 包装  →  BF31/BF32
-        var body = new byte[2 + aid.Length + 3];
-        body[0] = 0x4F;
-        body[1] = (byte)aid.Length;
-        Array.Copy(aid, 0, body, 2, aid.Length);
-        var flagOffset = 2 + aid.Length;
-        body[flagOffset] = 0x81;
-        body[flagOffset + 1] = 0x01;
-        body[flagOffset + 2] = 0x00; // refreshFlag = FALSE
-
-        var choice = new byte[2 + body.Length];
-        choice[0] = 0xA0;
-        choice[1] = (byte)body.Length;
-        Array.Copy(body, 0, choice, 2, body.Length);
-
-        var req = new byte[3 + choice.Length];
-        req[0] = 0xBF;
-        req[1] = (byte)(enable ? 0x31 : 0x32);
-        req[2] = (byte)choice.Length;
-        Array.Copy(choice, 0, req, 3, choice.Length);
-
-        var resp = await Es10CommandAsync(req, ct).ConfigureAwait(false);
+    /// <summary>发送一条 ES10c 操作指令并解析「BFxx &lt;len&gt; 80 01 &lt;code&gt;」形式的结果。</summary>
+    private async Task<ProfileStateResult> ExecuteProfileOpAsync(
+        byte[] request, int opTag, CancellationToken ct)
+    {
+        var resp = await Es10CommandAsync(request, ct).ConfigureAwait(false);
         if (resp is null)
         {
             return new ProfileStateResult(false, -1, "eUICC 无响应（STORE DATA / CGLA 失败）");
         }
 
-        var opTag = enable ? 0xBF31 : 0xBF32;
         var root = BerTlv.Find(BerTlv.Parse(resp), opTag);
         if (root is null)
         {
@@ -453,6 +433,196 @@ public sealed class LogicalChannelEs10
 
         var code = BerTlv.ToLong(codeNode.Value);
         return new ProfileStateResult(code == 0, code, DescribeResultCode(code));
+    }
+
+    /// <summary>
+    /// 删除 Profile（ES10c DeleteProfile `BF33`，与 lpac es10c_delete_profile 同款）。
+    /// 与 Enable/Disable 的关键差别：删除请求没有 A0 包装、不带 refreshFlag ——
+    ///   BF33 &lt;len&gt; 4F &lt;len&gt; &lt;ISD-P AID&gt;   （或 5A + ICCID BCD）
+    /// 响应：BF33 &lt;len&gt; 80 01 &lt;code&gt;。
+    /// 注意：已启用的 Profile 通常会被卡拒绝（需先停用再删除）；删除不可恢复。
+    /// </summary>
+    public async Task<ProfileStateResult> DeleteProfileAsync(
+        string isdpAidHexOrIccid, CancellationToken ct = default)
+    {
+        if (_channel <= 0)
+        {
+            return new ProfileStateResult(false, -1, "ISD-R 逻辑通道未打开");
+        }
+
+        byte[] req;
+        try
+        {
+            req = BuildDeleteProfileRequest(isdpAidHexOrIccid);
+        }
+        catch (ArgumentException ex)
+        {
+            return new ProfileStateResult(false, -1, ex.Message);
+        }
+
+        return await ExecuteProfileOpAsync(req, 0xBF33, ct).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// 设置 / 清除 Profile 昵称（ES10c SetNickname `BF29`，lpac es10c_set_nickname 同款）。
+    /// SGP.22 规定昵称按 ICCID 定位（tag 5A，BCD 10 字节），昵称为 ASCII（tag 90，0..64 字节）：
+    ///   BF29 &lt;len&gt; 5A 0A &lt;ICCID BCD&gt; 90 &lt;len&gt; &lt;ascii&gt;
+    /// 传空字符串即清除昵称。响应：BF29 &lt;len&gt; 80 01 &lt;code&gt;。
+    /// 昵称写入不影响 Profile 运行状态，无需重启模块。
+    /// </summary>
+    public async Task<ProfileStateResult> SetNicknameAsync(
+        string iccid, string nickname, CancellationToken ct = default)
+    {
+        if (_channel <= 0)
+        {
+            return new ProfileStateResult(false, -1, "ISD-R 逻辑通道未打开");
+        }
+
+        byte[] req;
+        try
+        {
+            req = BuildNicknameRequest(iccid, nickname);
+        }
+        catch (ArgumentException ex)
+        {
+            return new ProfileStateResult(false, -1, ex.Message);
+        }
+
+        return await ExecuteProfileOpAsync(req, 0xBF29, ct).ConfigureAwait(false);
+    }
+
+    // ---------- 报文编码（internal，供单元测试逐字节验证） ----------
+
+    /// <summary>
+    /// 构造 BF31（启用）/ BF32（停用）请求，与 lpac es10c_enable_disable_delete_profile
+    /// 的 A0 包装分支逐字节对齐，refreshFlag 固定 FALSE（由宿主负责重启刷新）：
+    ///   BF31 &lt;len&gt; A0 &lt;len&gt; 4F &lt;len&gt; &lt;ISD-P AID&gt; 81 01 00
+    /// id 为 32 字符 hex（ISD-P AID）时用 tag 4F，否则按 ICCID 用 tag 5A（BCD）。
+    /// </summary>
+    internal static byte[] BuildProfileStateRequest(bool enable, string id)
+    {
+        var ident = BuildProfileIdentifier(id);
+        var choiceLen = ident.Length + 3; // ident + 81 01 00
+        var req = new byte[5 + choiceLen];
+        req[0] = 0xBF;
+        req[1] = (byte)(enable ? 0x31 : 0x32);
+        req[2] = (byte)(choiceLen + 2); // A0 TLV 总长
+        req[3] = 0xA0;
+        req[4] = (byte)choiceLen;
+        Array.Copy(ident, 0, req, 5, ident.Length);
+        var f = 5 + ident.Length;
+        req[f] = 0x81;
+        req[f + 1] = 0x01;
+        req[f + 2] = 0x00;
+        return req;
+    }
+
+    /// <summary>
+    /// 构造 BF33（删除）请求：BF33 &lt;len&gt; 4F/5A &lt;len&gt; &lt;id&gt;，无 A0 包装、无 refreshFlag
+    /// （lpac 中 delete 以 refreshFlag=0 走「无包装」分支）。
+    /// </summary>
+    internal static byte[] BuildDeleteProfileRequest(string id)
+    {
+        var ident = BuildProfileIdentifier(id);
+        var req = new byte[3 + ident.Length];
+        req[0] = 0xBF;
+        req[1] = 0x33;
+        req[2] = (byte)ident.Length;
+        Array.Copy(ident, 0, req, 3, ident.Length);
+        return req;
+    }
+
+    /// <summary>
+    /// 构造 BF29（设昵称）请求：BF29 &lt;len&gt; 5A 0A &lt;ICCID BCD(10)&gt; 90 &lt;len&gt; &lt;ascii&gt;。
+    /// 空昵称编码为 90 00（SGP.22 ProfileNickname SIZE(0..64)，长度 0 即清除）。
+    /// </summary>
+    internal static byte[] BuildNicknameRequest(string iccid, string nickname)
+    {
+        if (iccid.Length is < 18 or > 20 || iccid.Any(c => c is < '0' or > '9'))
+        {
+            throw new ArgumentException("ICCID 应为 18~20 位数字");
+        }
+        if (nickname.Length > 64 || nickname.Any(c => c > 0x7F))
+        {
+            throw new ArgumentException("昵称应为不超过 64 个 ASCII 字符");
+        }
+
+        var bcd = IccidToBcd(iccid, 10);
+        var nick = Encoding.ASCII.GetBytes(nickname);
+        // 5A TLV(12) + 90 TLV(2+n)
+        var req = new byte[3 + 12 + 2 + nick.Length];
+        req[0] = 0xBF;
+        req[1] = 0x29;
+        req[2] = (byte)(14 + nick.Length);
+        req[3] = 0x5A;
+        req[4] = 0x0A;
+        Array.Copy(bcd, 0, req, 5, 10);
+        req[15] = 0x90;
+        req[16] = (byte)nick.Length;
+        Array.Copy(nick, 0, req, 17, nick.Length);
+        return req;
+    }
+
+    /// <summary>构造 Profile 标识 TLV：32 字符 hex → 4F + AID；否则按 ICCID → 5A + BCD。</summary>
+    private static byte[] BuildProfileIdentifier(string id)
+    {
+        if (id.Length == 32)
+        {
+            byte[] aid;
+            try
+            {
+                aid = Unhex(id);
+            }
+            catch
+            {
+                throw new ArgumentException("ISD-P AID 格式错误");
+            }
+            if (aid.Length == 0 || aid.Length > 16)
+            {
+                throw new ArgumentException("ISD-P AID 长度异常");
+            }
+
+            var tlv = new byte[2 + aid.Length];
+            tlv[0] = 0x4F;
+            tlv[1] = (byte)aid.Length;
+            Array.Copy(aid, 0, tlv, 2, aid.Length);
+            return tlv;
+        }
+
+        var bcd = IccidToBcd(id, 10);
+        var t = new byte[12];
+        t[0] = 0x5A;
+        t[1] = 0x0A;
+        Array.Copy(bcd, 0, t, 2, 10);
+        return t;
+    }
+
+    /// <summary>
+    /// ICCID 数字串 → BCD（低 nibble 在前，奇数长度补 F 填充）。与 IccidFromBcd 互逆。
+    /// </summary>
+    internal static byte[] IccidToBcd(string iccid, int byteLength = 10)
+    {
+        if (iccid.Length > byteLength * 2 || iccid.Any(c => c is < '0' or > '9'))
+        {
+            throw new ArgumentException("ICCID 应为纯数字且长度不超过 " + byteLength * 2);
+        }
+
+        var nibbles = new List<byte>(byteLength * 2);
+        foreach (var c in iccid)
+        {
+            nibbles.Add((byte)(c - '0'));
+        }
+        while (nibbles.Count < byteLength * 2)
+        {
+            nibbles.Add(0x0F);
+        }
+
+        var bytes = new byte[byteLength];
+        for (var i = 0; i < byteLength; i++)
+        {
+            bytes[i] = (byte)(nibbles[i * 2] | (nibbles[(i * 2) + 1] << 4));
+        }
+        return bytes;
     }
 
     private static string DescribeResultCode(long code) => code switch

@@ -123,9 +123,7 @@ public partial class EsimPage : UserControl, IModuleAware
                 p.DisplayName,
                 BuildProfileDetail(p),
                 p.Enabled ? "已启用" : null,
-                p.IsdpAid is null ? null : p.Enabled ? "停用" : "启用",
-                p.IsdpAid is null ? null : ProfileToggle_Click,
-                p));
+                BuildProfileActions(p)));
         }
 
         if (result.Profiles.Count == 0)
@@ -248,17 +246,7 @@ public partial class EsimPage : UserControl, IModuleAware
             if (_modem.IsConnected && _modem.Info is not null)
             {
                 // 重新探测并渲染切换后的真实状态
-                var fresh = await _modem.Info.ProbeEuiccAsync();
-                ProfilePanel.Children.Clear();
-                if (fresh.Capability == EuiccCapability.Ready)
-                {
-                    RenderReady(fresh);
-                    AddCardInfo();
-                }
-                else
-                {
-                    ProfileHint.Text = $"模块已连接，但 eUICC 探测结论变为 {fresh.Capability}，请点「读取」重试。";
-                }
+                await RefreshListAsync();
             }
             else
             {
@@ -274,7 +262,206 @@ public partial class EsimPage : UserControl, IModuleAware
         finally
         {
             _busy = false;
-            RefreshButton.IsEnabled = _modem.IsConnected;
+            RefreshButton.IsEnabled = _modem?.IsConnected == true;
+        }
+    }
+
+    /// <summary>Profile 卡片的操作按钮：启用/停用（需有 ISD-P AID）、改名（需有 ICCID）、删除。</summary>
+    private List<(string Label, RoutedEventHandler Handler, object? Tag)> BuildProfileActions(
+        EsimProfileInfo p)
+    {
+        var actions = new List<(string, RoutedEventHandler, object?)>();
+        if (p.IsdpAid is null)
+        {
+            return actions;
+        }
+
+        actions.Add((p.Enabled ? "停用" : "启用", ProfileToggle_Click, p));
+        if (!string.IsNullOrWhiteSpace(p.Iccid))
+        {
+            actions.Add(("改名", Rename_Click, p));
+        }
+        actions.Add(("删除", Delete_Click, p));
+        return actions;
+    }
+
+    /// <summary>
+    /// 修改 Profile 昵称（ES10c SetNickname BF29，按 ICCID 定位）。
+    /// 昵称只影响显示，不改变运行状态，无需重启模块。
+    /// </summary>
+    private async void Rename_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button { Tag: EsimProfileInfo p } ||
+            string.IsNullOrWhiteSpace(p.Iccid))
+        {
+            return;
+        }
+
+        if (!EnsureEuiccReady(out var es10))
+        {
+            return;
+        }
+
+        var dlg = new Dialogs.InputDialog
+        {
+            Owner = Window.GetWindow(this),
+            Prompt = $"为「{p.DisplayName}」设置昵称（不超过 64 个英文字符，留空清除）：",
+            InputText = p.Nickname ?? string.Empty,
+        };
+        if (dlg.ShowDialog() != true)
+        {
+            return;
+        }
+
+        var nickname = dlg.InputText.Trim();
+        if (_busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        RefreshButton.IsEnabled = false;
+        ProfileHint.Text = "正在写入昵称…";
+        try
+        {
+            var r = await es10.SetNicknameAsync(p.Iccid, nickname);
+            if (!r.Ok)
+            {
+                MessageBox.Show(
+                    $"写入失败：{r.Message}（code={r.Code}）",
+                    "改名失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            await RefreshListAsync();
+        }
+        catch (Exception ex)
+        {
+            ProfileHint.Text = $"改名失败：{ex.Message}";
+        }
+        finally
+        {
+            _busy = false;
+            RefreshButton.IsEnabled = _modem?.IsConnected == true;
+        }
+    }
+
+    /// <summary>
+    /// 删除 Profile（ES10c DeleteProfile BF33）。删除不可恢复，双重确认；
+    /// 已启用的 Profile 多数卡会拒绝删除，需先停用。
+    /// </summary>
+    private async void Delete_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.Button { Tag: EsimProfileInfo p } ||
+            string.IsNullOrWhiteSpace(p.IsdpAid))
+        {
+            return;
+        }
+
+        if (!EnsureEuiccReady(out var es10))
+        {
+            return;
+        }
+
+        var first = MessageBox.Show(
+            $"确定要删除「{p.DisplayName}」吗？\n\n"
+            + $"ICCID：{p.Iccid ?? "未知"}\n\n"
+            + "删除会把该 Profile 从 eUICC 中移除（不可恢复）。"
+            + "若以后还需要，需要重新用 LPA 下载（二维码 + 确认码）。",
+            "删除 Profile", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (first != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        var second = MessageBox.Show(
+            "再次确认：此操作不可撤销。\n"
+            + "已启用的 Profile 通常会被卡拒绝删除 —— 建议先停用。\n\n"
+            + "真的要删除吗？",
+            "最终确认", MessageBoxButton.YesNo, MessageBoxImage.Stop);
+        if (second != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        if (_busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        RefreshButton.IsEnabled = false;
+        ProfileHint.Text = $"正在删除「{p.DisplayName}」…";
+        try
+        {
+            var r = await es10.DeleteProfileAsync(p.IsdpAid);
+            if (!r.Ok)
+            {
+                var hint = p.Enabled
+                    ? "\n\n该 Profile 处于启用状态，多数卡会拒绝删除 —— 请先停用。"
+                    : string.Empty;
+                MessageBox.Show(
+                    $"删除失败：{r.Message}（code={r.Code}）{hint}",
+                    "删除失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            MessageBox.Show("该 Profile 已从卡内删除。", "删除成功",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+            await RefreshListAsync();
+        }
+        catch (Exception ex)
+        {
+            ProfileHint.Text = $"删除失败：{ex.Message}";
+        }
+        finally
+        {
+            _busy = false;
+            RefreshButton.IsEnabled = _modem?.IsConnected == true;
+        }
+    }
+
+    /// <summary>确认 eUICC 通道可用，不可用时提示并返回 false。</summary>
+    private bool EnsureEuiccReady(out LogicalChannelEs10 es10)
+    {
+        es10 = null!;
+        if (_modem is null || !_modem.IsConnected || _modem.Info is null)
+        {
+            ProfileHint.Text = "模块未连接。";
+            return false;
+        }
+
+        var channel = _modem.Info.Es10;
+        if (channel is null)
+        {
+            MessageBox.Show("eUICC 通道未就绪，请先点「读取」完成探测。", "无法操作",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return false;
+        }
+
+        es10 = channel;
+        return true;
+    }
+
+    /// <summary>重新探测 eUICC 并刷新列表（昵称 / 删除等无需重启模块的操作用）。</summary>
+    private async Task RefreshListAsync()
+    {
+        if (_modem?.Info is null)
+        {
+            return;
+        }
+
+        var fresh = await _modem.Info.ProbeEuiccAsync();
+        ProfilePanel.Children.Clear();
+        if (fresh.Capability == EuiccCapability.Ready)
+        {
+            IccidText.Text = _modem.Status.Iccid ?? "--";
+            RenderReady(fresh);
+            AddCardInfo();
+        }
+        else
+        {
+            ProfileHint.Text = $"模块已连接，但 eUICC 探测结论变为 {fresh.Capability}，请点「读取」重试。";
         }
     }
 
@@ -417,9 +604,7 @@ public partial class EsimPage : UserControl, IModuleAware
         string title,
         string detail,
         string? badge,
-        string? actionLabel = null,
-        RoutedEventHandler? onAction = null,
-        object? actionTag = null)
+        IReadOnlyList<(string Label, RoutedEventHandler Handler, object? Tag)>? actions = null)
     {
         var border = new Border
         {
@@ -433,7 +618,7 @@ public partial class EsimPage : UserControl, IModuleAware
         var grid = new Grid();
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-        if (!string.IsNullOrEmpty(actionLabel))
+        if (actions is { Count: > 0 })
         {
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         }
@@ -477,26 +662,29 @@ public partial class EsimPage : UserControl, IModuleAware
             nextColumn++;
         }
 
-        if (!string.IsNullOrEmpty(actionLabel))
+        if (actions is { Count: > 0 })
         {
-            var btn = new Button
+            var panel = new StackPanel { Orientation = Orientation.Horizontal };
+            for (var i = 0; i < actions.Count; i++)
             {
-                Content = actionLabel,
-                Style = (Style)Application.Current.FindResource("GhostButton"),
-                MinWidth = 52,
-                Height = 26,
-                Padding = new Thickness(10, 0, 10, 0),
-                Margin = new Thickness(10, 0, 0, 0),
-                VerticalAlignment = VerticalAlignment.Center,
-                Tag = actionTag,
-            };
-            if (onAction is not null)
-            {
-                btn.Click += onAction;
+                var (label, handler, tag) = actions[i];
+                var btn = new Button
+                {
+                    Content = label,
+                    Style = (Style)Application.Current.FindResource("GhostButton"),
+                    MinWidth = 52,
+                    Height = 26,
+                    Padding = new Thickness(10, 0, 10, 0),
+                    Margin = new Thickness(10, 0, 0, 0),
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Tag = tag,
+                };
+                btn.Click += handler;
+                panel.Children.Add(btn);
             }
 
-            Grid.SetColumn(btn, nextColumn);
-            grid.Children.Add(btn);
+            Grid.SetColumn(panel, nextColumn);
+            grid.Children.Add(panel);
         }
 
         border.Child = grid;

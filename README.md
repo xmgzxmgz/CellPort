@@ -1,5 +1,7 @@
 # CellPort
 
+**[English](README.en.md) | 简体中文**
+
 **A Windows-native manager for DJI 1st-gen 4G modules (Quectel EG25-G) — SMS · Calls · Device info · eSIM / eUICC profile switching · AT console.**
 
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2B-blue)
@@ -13,8 +15,14 @@ CellPort 是一款 **Windows 原生**（不依赖 WSL）的大疆一代 4G 模�
 > 硬件为大疆 4G 模块一代（实为 Quectel EG25-G / MDM9607 内核），
 > 理论上兼容所有 EG25-G / EC25 系列模组。
 
-**📥 免构建下载**：前往 [Releases](https://github.com/xmgzxmgz/CellPort/releases/latest) 下载 `CellPort-v1.0.0-win-x64.zip`，
-解压运行 `CellPort.exe`（需 [.NET 9 Desktop Runtime (x64)](https://dotnet.microsoft.com/download/dotnet/9.0)）。
+**📥 免构建下载**：前往 [Releases](https://github.com/xmgzxmgz/CellPort/releases/latest) 按需选择：
+
+| 包 | 适用场景 |
+|---|---|
+| `CellPort-v*-win-x64.zip`（约 0.4 MB） | 已装 [.NET 9 Desktop Runtime (x64)](https://dotnet.microsoft.com/download/dotnet/9.0)，体积小 |
+| `CellPort-v*-win-x64-selfcontained.zip`（约 60 MB） | 免装运行时，解压即用 |
+
+解压运行 `CellPort.exe` 即可。
 
 ![eSIM 页面截图（已脱敏）](docs/screenshot-esim.png)
 
@@ -28,8 +36,15 @@ CellPort 是一款 **Windows 原生**（不依赖 WSL）的大疆一代 4G 模�
 - **eSIM / eUICC**（本项目的核心）：
   - 逻辑通道读取：EID（双路径）+ Profile 列表（ICCID / 运营商 / ISD-P AID / 状态 / 类别）
   - **Profile 启用 / 停用切卡**（真机验证通过），写入后引导重启模块并自动重连
+  - **Profile 删除**（`BF33`）与**昵称修改**（`BF29`，按 ICCID 定位，≤64 ASCII 字符），编码与 lpac 逐字节一致
+- **USSD 查询**：`AT+CUSD` 封装，GSM7 打包 / UCS2 自动解码，支持链式响应提示
+- **SIM 电话簿**：读取 SM 存储容量与联系人列表，中文姓名（UCS2）自动解码，点击号码复制
+- **短信导出**：会话一键导出 CSV（Excel 友好，带 BOM）/ JSON
+- **运行日志**：`%LOCALAPPDATA%\CellPort\logs` 自动滚动，保留 7 天，含全局异常兜底
+- **更新检查**：设置页一键检查 GitHub Release 新版本
 - **AT 控制台**：任意指令执行、历史翻阅、快捷指令
 - **连接策略**：串口自动探测 + 端口缓存 + 蓝牙虚拟口剔除，冷启动 ~600ms、热启动 ~60ms
+- **质量保障**：Core 层单元测试 30 例（GSM7 标准向量、ES10c 报文逐字节、BCD、导出转义），GitHub Actions 自动发布
 - 深 / 浅 / 跟随系统主题；短信转发到 Bark / 飞书 / 钉钉
 
 ## 硬件背景（已实测确认）
@@ -133,12 +148,18 @@ CellPort/
 │   │   ├── Models/             #   设备状态 / Profile 模型
 │   │   └── Services/           #   ModemManager / DeviceInfo / Sms / Call
 │   │                           #   LogicalChannelEs10 (CCHO/CGLA + ES10c) / BerTlv
+│   │                           #   Cusd / Phonebook / SmsExport / AppLog / UpdateCheck
 │   └── CellPort.App/           # WPF 界面（深浅主题、六页面）
+├── tests/
+│   └── CellPort.Core.Tests/    # 单元测试（GSM7 / ES10c 编码 / BCD / 导出）
 ├── tools/
 │   ├── PortProbe/              # 串口枚举 + AT 探测（排障用）
 │   ├── EsimProbe/              # eUICC 全链路验证（读取 + 切卡回环测试）
 │   ├── DiagTool/               # 连接诊断
 │   └── E2E/                    # 端到端真机测试
+├── scripts/
+│   └── publish.ps1             # 本地双配置打包（framework/self-contained）
+├── .github/workflows/          # push tag 自动测试 + 构建 + 发布 Release
 └── docs/                       # 截图（已脱敏）
 ```
 
@@ -147,9 +168,20 @@ CellPort/
 - **EID**：SGP.22 `BF3E` 与 SGP.02 `GET DATA 9F7F` 两条路径在 9eSIM 这类早期规范卡上
   均被 ISD-R 拒绝（`6A80` / `6D00`）—— 是卡片不提供，不是模块问题；
   CellDock 在此类卡上同样读不到。Profile 管理不受影响。
-- **Profile 删除（`BF33`）与昵称修改（`BF29`）尚未实现**；需要时可用 EasyLPAC 等工具操作。
+- **Profile 删除（`BF33`）与昵称修改（`BF29`）已实现**（v1.0.1），请求编码与 lpac `es10c.c` 对齐：
+  - 删除：`BF33 <len> 4F <len> <AID>`（无 A0 包装、无 refreshFlag —— 与 lpac `refreshFlag & 0x80` 判定一致）
+  - 昵称：`BF29 <len> 5A 0A <ICCID BCD> 90 <len> <ASCII>`（按 ICCID 定位，非 AID）
 - 切卡后必须重启模块（或重新上电）新卡才生效 —— modem 侧限制，程序已做引导与自动重连。
 - 数据网卡（MI_04，ECM）拨号由 Windows 处理，程序不介入。
+
+## 路线图
+
+| 项 | 状态 | 说明 |
+|---|---|---|
+| Profile 删除 / 昵称修改 | ✅ v1.0.1 | ES10c `BF33` / `BF29` |
+| USSD / 电话簿 / 短信导出 | ✅ v1.0.1 | |
+| 运行日志 / 更新检查 | ✅ v1.0.1 | |
+| **Profile 下载（ES10b + SM-DP+）** | ⏸ 暂缓 | 需要真实 SM-DP+ 服务器联调才能验证协议实现；在仅有本地测试环境（无可用的 LPA 激活码）的情况下，贸然实现并宣称支持是不负责任的 —— 待拿到可联调的运营商/测试 SM-DP+ 后再落地 |
 
 ## FAQ
 

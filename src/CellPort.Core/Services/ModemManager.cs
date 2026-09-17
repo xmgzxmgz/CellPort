@@ -57,7 +57,14 @@ public sealed class ModemManager : IAsyncDisposable
     /// <summary>连接过程中的阶段性诊断信息（供诊断工具/界面显示）。</summary>
     public event EventHandler<string>? TraceMessage;
 
-    private void Trace(string message) => TraceMessage?.Invoke(this, message);
+    /// <summary>
+    /// 阶段性诊断信息：通知界面显示，同时落文件日志（AppLog 未初始化时自动 no-op）。
+    /// </summary>
+    private void Trace(string message)
+    {
+        TraceMessage?.Invoke(this, message);
+        AppLog.Write("TRACE", message);
+    }
 
     /// <summary>当前是否已连接。</summary>
     public bool IsConnected => _engine?.Channel.IsOpen == true;
@@ -73,6 +80,12 @@ public sealed class ModemManager : IAsyncDisposable
 
     /// <summary>设备信息服务。</summary>
     public DeviceInfoService? Info { get; private set; }
+
+    /// <summary>USSD 会话服务。</summary>
+    public CusdService? Cusd { get; private set; }
+
+    /// <summary>SIM 电话簿服务。</summary>
+    public PhonebookService? Phonebook { get; private set; }
 
     /// <summary>当前 AT 通道描述。</summary>
     public string ChannelDescription => _engine?.Channel.Description ?? "未连接";
@@ -228,6 +241,8 @@ public sealed class ModemManager : IAsyncDisposable
         Sms = new SmsService(engine);
         Calls = new CallService(engine);
         Info = new DeviceInfoService(engine);
+        Cusd = new CusdService(engine);
+        Phonebook = new PhonebookService(engine);
 
         await Sms.InitializeAsync(ct).ConfigureAwait(false);
         await Calls.InitializeAsync(ct).ConfigureAwait(false);

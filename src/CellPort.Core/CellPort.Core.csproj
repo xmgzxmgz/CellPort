@@ -10,6 +10,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- 单元测试项目需要验证 internal 的 BF3x 报文编码方法。 -->
+    <InternalsVisibleTo Include="CellPort.Core.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- WinUSB 直接通过 P/Invoke 调用，无需第三方 USB 库。 -->
     <PackageReference Include="System.IO.Ports" Version="9.0.0" />
     <PackageReference Include="System.Management" Version="9.0.0" />

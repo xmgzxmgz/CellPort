@@ -294,4 +294,118 @@ public partial class DevicePage : UserControl, IModuleAware
         var dlg = new Dialogs.WinUsbBinderDialog { Owner = Window.GetWindow(this) };
         dlg.ShowDialog();
     }
+
+    /// <summary>发送 USSD 请求并展示网络响应。</summary>
+    private async void UssdSend_Click(object sender, RoutedEventArgs e)
+    {
+        if (_modem is null || !_modem.IsConnected || _modem.Cusd is null)
+        {
+            UssdResult.Text = "模块未连接。";
+            return;
+        }
+
+        var code = UssdBox.Text.Trim();
+        if (code.Length == 0)
+        {
+            return;
+        }
+
+        UssdSendButton.IsEnabled = false;
+        UssdSendButton.Content = "发送中…";
+        UssdResult.Text = $"正在向网络发送 {code} …（响应可能需要数秒）";
+
+        try
+        {
+            var r = await _modem.Cusd.SendAsync(code);
+            UssdResult.Text = r.Ok
+                ? (r.Text is { Length: > 0 } ? r.Text : "（网络返回空内容）")
+                : $"失败：{r.Raw ?? "无响应"}";
+        }
+        catch (Exception ex)
+        {
+            UssdResult.Text = $"发送异常：{ex.Message}";
+        }
+        finally
+        {
+            UssdSendButton.IsEnabled = true;
+            UssdSendButton.Content = "发送";
+        }
+    }
+
+    /// <summary>读取 SIM 电话簿并展示。</summary>
+    private async void PhonebookRead_Click(object sender, RoutedEventArgs e)
+    {
+        if (_modem is null || !_modem.IsConnected || _modem.Phonebook is null)
+        {
+            PhonebookSummary.Text = "模块未连接。";
+            return;
+        }
+
+        PhonebookButton.IsEnabled = false;
+        PhonebookButton.Content = "读取中…";
+        PhonebookPanel.Children.Clear();
+        PhonebookSummary.Text = "正在读取 SIM 电话簿…";
+
+        try
+        {
+            var entries = await _modem.Phonebook.ListAsync();
+            PhonebookSummary.Text = entries.Count == 0
+                ? "SIM 电话簿为空，或当前 SIM 不支持电话簿读取。"
+                : $"共 {entries.Count} 条联系人（点击行复制号码）：";
+
+            foreach (var entry in entries)
+            {
+                PhonebookPanel.Children.Add(BuildPhonebookRow(entry));
+            }
+        }
+        catch (Exception ex)
+        {
+            PhonebookSummary.Text = $"读取失败：{ex.Message}";
+        }
+        finally
+        {
+            PhonebookButton.IsEnabled = true;
+            PhonebookButton.Content = "读取";
+        }
+    }
+
+    private FrameworkElement BuildPhonebookRow(PhonebookEntry entry)
+    {
+        var border = new Border
+        {
+            Background = (Brush)FindResource("CardHoverBrush"),
+            CornerRadius = new CornerRadius(6),
+            Padding = new Thickness(10, 6, 10, 6),
+            Margin = new Thickness(0, 2, 0, 2),
+            Cursor = System.Windows.Input.Cursors.Hand,
+            ToolTip = "点击复制号码",
+        };
+
+        var text = new TextBlock
+        {
+            FontSize = 12,
+            Text = string.IsNullOrWhiteSpace(entry.Name)
+                ? entry.Number
+                : $"{entry.Name}　·　{entry.Number}",
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            Foreground = (Brush)FindResource("TextBrush"),
+            VerticalAlignment = VerticalAlignment.Center,
+        };
+        border.Child = text;
+
+        border.MouseLeftButtonDown += (_, _) =>
+        {
+            try
+            {
+                Clipboard.SetText(entry.Number);
+                PhonebookSummary.Text = $"已复制号码 {entry.Number}";
+            }
+            catch
+            {
+                // 剪贴板被占用时忽略
+            }
+        };
+
+        return border;
+    }
 }
