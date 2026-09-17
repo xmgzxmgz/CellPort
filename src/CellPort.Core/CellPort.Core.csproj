@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>CellPort.Core</AssemblyName>
+    <RootNamespace>CellPort.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WinUSB 直接通过 P/Invoke 调用，无需第三方 USB 库。 -->
+    <PackageReference Include="System.IO.Ports" Version="9.0.0" />
+    <PackageReference Include="System.Management" Version="9.0.0" />
+  </ItemGroup>
+
+</Project>

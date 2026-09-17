@@ -1,0 +1,126 @@
+<UserControl x:Class="CellPort.App.Views.CallsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FontFamily="{StaticResource UiFont}">
+
+    <Grid Margin="22,18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- 拨号盘 -->
+        <Border Grid.Row="0" Style="{StaticResource Card}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="拨号" Style="{StaticResource HeadingText}"
+                               Margin="0,0,0,10" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox x:Name="DialNumberBox" Grid.Column="0"
+                                 Style="{StaticResource InputBox}"
+                                 FontSize="16"
+                                 ToolTip="输入号码" />
+
+                        <Button x:Name="DialButton" Grid.Column="1" Content="拨打"
+                                Margin="8,0,0,0"
+                                Style="{StaticResource PrimaryButton}"
+                                Click="Dial_Click" />
+
+                        <Button x:Name="HangupButton" Grid.Column="2" Content="挂断"
+                                Margin="8,0,0,0"
+                                Style="{StaticResource GhostButton}"
+                                Click="Hangup_Click" />
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                        <Button x:Name="AnswerButton" Content="接听"
+                                Style="{StaticResource GhostButton}"
+                                Click="Answer_Click" />
+                        <Button x:Name="MuteButton" Content="静音"
+                                Margin="8,0,0,0"
+                                Style="{StaticResource GhostButton}"
+                                Click="Mute_Click" />
+                        <TextBlock x:Name="CallStateText" Text="空闲"
+                                   Margin="14,0,0,0"
+                                   VerticalAlignment="Center"
+                                   Style="{StaticResource DimText}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- 通话中按键 -->
+                <UniformGrid Grid.Column="1" Rows="4" Columns="3"
+                             x:Name="KeypadGrid" Margin="24,0,0,0" />
+            </Grid>
+        </Border>
+
+        <!-- 通话记录 -->
+        <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,12,0,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="通话记录"
+                           Style="{StaticResource HeadingText}"
+                           Margin="0,0,0,10" />
+
+                <ListView x:Name="HistoryList" Grid.Row="1"
+                          Background="Transparent" BorderThickness="0">
+                    <ListView.ItemContainerStyle>
+                        <Style TargetType="ListViewItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="Margin" Value="0,1,0,1" />
+                        </Style>
+                    </ListView.ItemContainerStyle>
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <Border Background="{DynamicResource CardHoverBrush}"
+                                    CornerRadius="7" Padding="12,8">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock Grid.Column="0" Text="{Binding DirIcon}"
+                                               FontSize="13" Width="20"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding Number}"
+                                               FontSize="13"
+                                               VerticalAlignment="Center"
+                                               Foreground="{DynamicResource TextBrush}" />
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal">
+                                        <TextBlock Text="{Binding DurationText}"
+                                                   FontSize="11"
+                                                   Margin="0,0,12,0"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TextDimBrush}" />
+                                        <TextBlock Text="{Binding TimeText}"
+                                                   FontSize="11"
+                                                   VerticalAlignment="Center"
+                                                   Foreground="{DynamicResource TextDimBrush}" />
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

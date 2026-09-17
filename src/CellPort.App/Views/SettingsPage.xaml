@@ -1,0 +1,124 @@
+<UserControl x:Class="CellPort.App.Views.SettingsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FontFamily="{StaticResource UiFont}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="22,18">
+        <StackPanel>
+
+            <!-- 外观 -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="外观" Style="{StaticResource HeadingText}"
+                               Margin="0,0,0,12" />
+
+                    <Grid>
+                        <TextBlock Text="主题" Style="{StaticResource BodyText}"
+                                   VerticalAlignment="Center" />
+                        <ComboBox x:Name="ThemeBox" HorizontalAlignment="Right"
+                                  Width="150" Height="32"
+                                  SelectionChanged="Theme_Changed">
+                            <ComboBoxItem Content="跟随系统" IsSelected="True" />
+                            <ComboBoxItem Content="深色" />
+                            <ComboBoxItem Content="浅色" />
+                        </ComboBox>
+                    </Grid>
+
+                    <Grid Margin="0,10,0,0">
+                        <StackPanel>
+                            <TextBlock Text="隐私模式" Style="{StaticResource BodyText}" />
+                            <TextBlock Text="在界面上隐藏号码与短信正文"
+                                       Style="{StaticResource DimText}"
+                                       Margin="0,2,0,0" />
+                        </StackPanel>
+                        <CheckBox x:Name="PrivacyBox" HorizontalAlignment="Right"
+                                  VerticalAlignment="Center"
+                                  Checked="Privacy_Changed" Unchecked="Privacy_Changed" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- 连接 -->
+            <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                <StackPanel>
+                    <TextBlock Text="连接" Style="{StaticResource HeadingText}"
+                               Margin="0,0,0,12" />
+
+                    <Grid>
+                        <StackPanel>
+                            <TextBlock Text="启动时自动连接" Style="{StaticResource BodyText}" />
+                            <TextBlock Text="程序启动后自动尝试发现并连接模块"
+                                       Style="{StaticResource DimText}"
+                                       Margin="0,2,0,0" />
+                        </StackPanel>
+                        <CheckBox x:Name="AutoConnectBox" HorizontalAlignment="Right"
+                                  VerticalAlignment="Center" IsChecked="True" />
+                    </Grid>
+
+                    <Grid Margin="0,10,0,0">
+                        <TextBlock Text="状态刷新间隔（秒）"
+                                   Style="{StaticResource BodyText}"
+                                   VerticalAlignment="Center" />
+                        <TextBox x:Name="RefreshIntervalBox" Text="5"
+                                 Width="80" HorizontalAlignment="Right"
+                                 Style="{StaticResource InputBox}" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- 短信转发 -->
+            <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                <StackPanel>
+                    <TextBlock Text="短信转发" Style="{StaticResource HeadingText}"
+                               Margin="0,0,0,12" />
+
+                    <TextBlock Style="{StaticResource DimText}" TextWrapping="Wrap"
+                               Text="收到短信后自动推送到指定渠道。留空表示不启用。" />
+
+                    <StackPanel Margin="0,12,0,0">
+                        <TextBlock Text="Bark 地址" Style="{StaticResource BodyText}" />
+                        <TextBox x:Name="BarkBox" Margin="0,4,0,0"
+                                 Style="{StaticResource InputBox}"
+                                 ToolTip="例如 https://api.day.app/你的key" />
+                    </StackPanel>
+
+                    <StackPanel Margin="0,10,0,0">
+                        <TextBlock Text="飞书机器人 Webhook" Style="{StaticResource BodyText}" />
+                        <TextBox x:Name="FeishuBox" Margin="0,4,0,0"
+                                 Style="{StaticResource InputBox}" />
+                    </StackPanel>
+
+                    <StackPanel Margin="0,10,0,0">
+                        <TextBlock Text="钉钉机器人 Webhook" Style="{StaticResource BodyText}" />
+                        <TextBox x:Name="DingTalkBox" Margin="0,4,0,0"
+                                 Style="{StaticResource InputBox}" />
+                    </StackPanel>
+
+                    <Button Content="保存设置" Margin="0,14,0,0"
+                            HorizontalAlignment="Left"
+                            Style="{StaticResource PrimaryButton}"
+                            Click="Save_Click" />
+                </StackPanel>
+            </Border>
+
+            <!-- 关于 -->
+            <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                <StackPanel>
+                    <TextBlock Text="关于" Style="{StaticResource HeadingText}"
+                               Margin="0,0,0,8" />
+                    <TextBlock Style="{StaticResource DimText}" TextWrapping="Wrap"
+                               Text="DJI 4G 模块管理器 · Windows 原生版" />
+                    <TextBlock Style="{StaticResource DimText}" TextWrapping="Wrap"
+                               Margin="0,4,0,0"
+                               Text="支持硬件：大疆第一代 4G 模块（Baiwang QDC507 / Quectel EG25-G），USB ID 2ca3:4006。" />
+                    <TextBlock Style="{StaticResource DimText}" TextWrapping="Wrap"
+                               Margin="0,4,0,0"
+                               Text="通过 WinUSB 直接访问 AT 接口，不依赖 WSL、Docker 或虚拟机。" />
+                    <TextBlock Style="{StaticResource DimText}" TextWrapping="Wrap"
+                               Margin="0,8,0,0"
+                               Text="本项目为社区第三方工具，与 DJI、Quectel、Baiwang 无隶属或授权关系。" />
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

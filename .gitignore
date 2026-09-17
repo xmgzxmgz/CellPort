@@ -1,0 +1,23 @@
+# Build artifacts
+bin/
+obj/
+dist/
+publish/
+*.user
+*.suo
+
+# Runtime / debug outputs (may contain real device data)
+probe-verify.txt
+esim-probe-result.txt
+probe-result.txt
+last-connect.log
+uia-*.txt
+
+# Local workspace data
+.workbuddy/
+
+# OS noise
+Thumbs.db
+.DS_Store
+diag-state.txt
+winstate.ps1

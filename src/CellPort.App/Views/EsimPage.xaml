@@ -1,0 +1,71 @@
+<UserControl x:Class="CellPort.App.Views.EsimPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FontFamily="{StaticResource UiFont}">
+
+    <Grid Margin="22,18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- ===== eUICC 卡信息 ===== -->
+        <Border Grid.Row="0" Style="{StaticResource Card}">
+            <StackPanel>
+                <Grid>
+                    <TextBlock Text="eUICC 卡信息"
+                               Style="{StaticResource HeadingText}"
+                               VerticalAlignment="Center" />
+                    <Button x:Name="RefreshButton" Content="读取"
+                            HorizontalAlignment="Right" Height="28"
+                            Padding="12,0"
+                            Style="{StaticResource GhostButton}"
+                            Click="Refresh_Click" />
+                </Grid>
+
+                <StackPanel Margin="0,12,0,0">
+                    <TextBlock Text="EID" Style="{StaticResource DimText}" />
+                    <TextBlock x:Name="EidText" Text="--"
+                               FontFamily="{StaticResource MonoFont}"
+                               FontSize="12" Margin="0,3,0,0"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextBrush}" />
+                </StackPanel>
+
+                <StackPanel Margin="0,12,0,0">
+                    <TextBlock Text="ICCID" Style="{StaticResource DimText}" />
+                    <TextBlock x:Name="IccidText" Text="--"
+                               FontFamily="{StaticResource MonoFont}"
+                               FontSize="12" Margin="0,3,0,0"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource TextBrush}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- ===== Profile 列表 ===== -->
+        <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,12,0,0" Padding="16,16,16,0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="Profile 列表"
+                           Style="{StaticResource HeadingText}" />
+
+                <TextBlock Grid.Row="1" x:Name="ProfileHint"
+                           Style="{StaticResource HintText}"
+                           Margin="0,8,0,0"
+                           Text="点击「读取」通过 3GPP 逻辑通道（与 CellDock 相同路径）读取 eUICC 的 EID 与 Profile。" />
+
+                <ScrollViewer Grid.Row="2" Margin="0,10,0,0"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel x:Name="ProfilePanel" />
+                </ScrollViewer>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

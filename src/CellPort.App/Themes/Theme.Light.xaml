@@ -1,0 +1,21 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ===== 浅色主题覆盖（在 Theme.xaml 之后合并即可切换） ===== -->
+
+    <Color x:Key="BgColor">#FFF5F5F7</Color>
+    <Color x:Key="SidebarColor">#FFEBEBEF</Color>
+    <Color x:Key="CardColor">#FFFFFFFF</Color>
+    <Color x:Key="CardHoverColor">#FFF0F0F4</Color>
+    <Color x:Key="BorderColor">#FFD8D8DE</Color>
+    <Color x:Key="TextColor">#FF1C1C1E</Color>
+    <Color x:Key="TextDimColor">#FF6E6E76</Color>
+    <Color x:Key="AccentColor">#FF007AFF</Color>
+    <Color x:Key="AccentSoftColor">#222F7CF6</Color>
+    <Color x:Key="SuccessColor">#FF28A745</Color>
+    <Color x:Key="WarnColor">#FFCC7A00</Color>
+    <Color x:Key="DangerColor">#FFD93025</Color>
+    <Color x:Key="BubbleInColor">#FFE9E9EF</Color>
+    <Color x:Key="BubbleOutColor">#FF007AFF</Color>
+
+</ResourceDictionary>

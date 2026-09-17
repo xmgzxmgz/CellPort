@@ -1,0 +1,110 @@
+<UserControl x:Class="CellPort.App.Views.DevicePage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             FontFamily="{StaticResource UiFont}">
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="22,18">
+        <StackPanel>
+            <!-- 模块信息 -->
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="模块信息" Style="{StaticResource HeadingText}"
+                               Margin="0,0,0,12" />
+                    <Grid x:Name="InfoGrid">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- USB 接口 -->
+            <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                <StackPanel>
+                    <Grid>
+                        <TextBlock Text="USB 接口" Style="{StaticResource HeadingText}"
+                                   VerticalAlignment="Center" />
+                        <Button x:Name="RescanButton" Content="重新扫描"
+                                HorizontalAlignment="Right" Height="28"
+                                Padding="12,0"
+                                Style="{StaticResource GhostButton}"
+                                Click="Rescan_Click" />
+                    </Grid>
+                    <TextBlock x:Name="UsbSummary" Text="尚未扫描"
+                               Style="{StaticResource HintText}"
+                               Margin="0,8,0,10" />
+                    <StackPanel x:Name="InterfacePanel" />
+                </StackPanel>
+            </Border>
+
+            <!-- 通信通道 -->
+            <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                <StackPanel>
+                    <TextBlock Text="通信通道" Style="{StaticResource HeadingText}"
+                               Margin="0,0,0,8" />
+                    <TextBlock Text="程序默认自动探测 AT 串口。若模块占用了多个 COM 口、或自动探测失败，可在此手动指定后重新连接。"
+                               Style="{StaticResource HintText}" />
+
+                    <Grid Margin="0,12,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="AT 串口" VerticalAlignment="Center"
+                                   Foreground="{StaticResource TextDimBrush}"
+                                   FontSize="12" />
+
+                        <ComboBox x:Name="PortCombo" Grid.Column="1"
+                                  Margin="10,0,0,0" Height="30"
+                                  VerticalContentAlignment="Center" />
+
+                        <Button x:Name="RefreshPortsButton" Grid.Column="2"
+                                Content="刷新" Height="30" Margin="8,0,0,0"
+                                Padding="12,0"
+                                Style="{StaticResource GhostButton}"
+                                Click="RefreshPorts_Click" />
+
+                        <Button x:Name="ReconnectButton" Grid.Column="3"
+                                Content="重新连接" Height="30" Margin="8,0,0,0"
+                                Padding="12,0"
+                                Style="{StaticResource PrimaryButton}"
+                                Click="Reconnect_Click" />
+                    </Grid>
+
+                    <TextBlock x:Name="ChannelStatus" Style="{StaticResource HintText}"
+                               Margin="0,10,0,0" Text="尚未连接" />
+                </StackPanel>
+            </Border>
+
+            <!-- 驱动引导 -->
+            <Border Style="{StaticResource Card}" Margin="0,12,0,0">
+                <StackPanel>
+                    <TextBlock Text="驱动与环境" Style="{StaticResource HeadingText}"
+                               Margin="0,0,0,8" />
+                    <TextBlock Text="本程序优先通过 WinUSB 直接访问模块的 AT 接口（MI_02），无需安装 Quectel 官方驱动包；若该接口未绑定 WinUSB，则自动回退到串口方式（需要 Quectel 驱动生成的 COM 口）。"
+                               Style="{StaticResource HintText}" />
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <Button Content="打开设备管理器" Height="30"
+                                Style="{StaticResource GhostButton}"
+                                Click="OpenDevMgr_Click" />
+                        <Button Content="打开驱动绑定向导" Height="30" Margin="8,0,0,0"
+                                Style="{StaticResource PrimaryButton}"
+                                Click="OpenBinder_Click" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
