@@ -44,6 +44,22 @@ jobs:
           Compress-Archive -Path "dist/framework-dependent/*" -DestinationPath "CellPort-v$v-win-x64.zip" -Force
           Compress-Archive -Path "dist/self-contained/*" -DestinationPath "CellPort-v$v-win-x64-selfcontained.zip" -Force
 
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          "C:\Program Files (x86)\Inno Setup 6" >> $env:GITHUB_PATH
+
+      - name: Patch installer version
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          $iss = "installer/CellPort.iss"
+          (Get-Content $iss -Raw) -replace '#define MyAppVersion ".*"', "#define MyAppVersion `"$v`"" | Set-Content $iss -NoNewline
+
+      - name: Build installer
+        run: ISCC.exe installer/CellPort.iss
+
       - name: Create Release and upload assets
         uses: softprops/action-gh-release@v2
         with:
@@ -51,3 +67,4 @@ jobs:
           files: |
             CellPort-v*-win-x64.zip
             CellPort-v*-win-x64-selfcontained.zip
+            CellPort-v*-setup.exe

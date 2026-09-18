@@ -10,6 +10,7 @@
     <AssemblyName>CellPort</AssemblyName>
     <RootNamespace>CellPort.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>..\..\docs\cellport.ico</ApplicationIcon>
     <Version>1.0.1</Version>
     <AssemblyTitle>DJI 4G 模块管理器</AssemblyTitle>
     <Product>CellPort Module Manager</Product>
